@@ -1,0 +1,17 @@
+{
+  "upstream_version": "2.1.30",
+  "upstream_sha256": "10e87dc675187accd3cda82bd526167e1c2dbfa139a9c592e7d0158568b86196",
+  "appimage_offset": 188392,
+  "asar_entry": "out/main/main-CbUpFI7g.js",
+  "original_module_sha256": "22c18fca2877f605ca8c2ff9f3ecc932f5dce594874a43496736784eb79e98cd",
+  "patched_module_sha256": "9790b6c9e2f16f0a17767e677b8df8133ca26dfcab64ebbbb88af8449685f543",
+  "mock_transport_test": "passed: scan timer disabled, handshake/initial device list/output routing/cleanup retained",
+  "modified_module_syntax": "passed: node --check",
+  "installed": false,
+  "pakman_core_modified": false,
+  "artifact_repacked": false,
+  "hardware_stability_verified": false,
+  "patch_sha256": "15091d5dcf17feb59c112d79c6794751aa8bc356486a2ee7d14a1a22e847384e",
+  "tagged_source_sha256": "1e71e64a09e5226ea8a30b8d3ca96c748ee9c696cb8e8f4061136e9a0871e77c",
+  "source_patch": "passed: zero fuzz, zero line offset"
+}

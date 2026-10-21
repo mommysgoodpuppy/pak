@@ -1,0 +1,91 @@
+-- Intiface Central: Buttplug server and device manager (Flutter app).
+-- Upstream's Ubuntu 24.04 bundle in /opt/intiface-central.
+
+from "../../../wm-mini/tooling/pakman/src/model.wm" import *;
+from "../../../wm-mini/tooling/pakman/src/package.wm" import { serve };
+from "../../../wm-mini/tooling/pakman/src/finders.wm" import { githubReleases, releaseCandidates, stableReleases, matchText };
+from js.module("../../../wm-mini/tooling/pakman/src/host.ts") import unsafe { captures: (String, String) -> Js.Array<String> };
+
+let repo = "intiface/intiface-central";
+
+let zip = (version) => { "intiface-central-v" ++ version ++ "-linux-ubuntu-24.04-x64.zip" };
+
+let versions = () => {
+  githubReleases(repo)
+    :> Task.map(releaseCandidates .{
+      ..stableReleases,
+      versionOf = matchText "^v(\\d+\\.\\d+\\.\\d+)\\+\\d+$",
+      assets = (version) => { [zip(version)] },
+      ref = (release, _) => { release.tag }
+    })
+};
+
+-- v3.2.2+46 -> v3.2.2%2B46
+let urlTag = (tag) => {
+  match(Js.Array.toList(captures("^(.*)\\+(\\d+)$", tag))) {
+    [_, base, build] => { base ++ "%2B" ++ build },
+    _ => { tag }
+  }
+};
+
+-- The release zip's layout changes between releases: from 3.2.2 it wraps a
+-- second zip holding the bundle; 3.1.1 has the bundle at the top; the rest
+-- have it under intiface-central/ next to __MACOSX junk.
+let folderLayout = ["3.2.1", "3.1.0", "3.0.4", "3.0.3", "3.0.2", "3.0.1", "3.0.0"];
+
+let bundle = (version) => {
+  if (version == "3.1.1") {
+    extract("intiface-central.zip", "opt/intiface-central", 0)
+  } else {
+    if (List.any(folderLayout, (v) => { v == version })) {
+      extractMembers("intiface-central.zip", ["intiface-central"], "opt/intiface-central", 1)
+    } else {
+      Extract(Unpack(["intiface-central.zip", zip(version)], [], "opt/intiface-central", 0))
+    }
+  }
+};
+
+let make = (version, tag) => {
+  let id = "com.nonpolynomial.intiface_central";
+  let raw = "https://raw.githubusercontent.com/" ++ repo ++ "/" ++ urlTag(tag);
+  Package(
+    version,
+    [
+      source("intiface-central.zip",
+        "https://github.com/" ++ repo ++ "/releases/download/" ++ urlTag(tag) ++ "/" ++ zip(version)),
+      source("LICENSE.md", raw ++ "/LICENSE.md")
+    ],
+    [
+      bundle(version),
+      -- Upstream's launcher cds into the bundle, resolving the link.
+      Symlink(Own("opt/intiface-central/run_intiface_central"), "usr/bin/intiface-central"),
+      Symlink(Own("opt/intiface-central/data/flutter_assets/assets/icons/intiface_central_icon.svg"),
+        "usr/share/icons/hicolor/scalable/apps/" ++ id ++ ".svg"),
+      Install("LICENSE.md", "usr/share/licenses/intiface-central/LICENSE.md", Data),
+      desktopEntry(id, .{
+        title = "Intiface Central",
+        comment = "Buttplug server and device manager",
+        exec = cat([ref(Own("usr/bin/intiface-central"))]),
+        icon = id,
+        categories = ["Utility"],
+        terminal = false
+      })
+    ],
+    [Base("/usr/lib/libgtk-3.so.0")]
+  )
+};
+
+let definition: Definition = .{
+  name = "intiface-central",
+  description = "Buttplug server and device manager",
+  homepage = "https://github.com/intiface/intiface-central",
+  license = "GPL-3.0-only",
+  target = Host,
+  scope = System,
+  versions,
+  hosts = ["api.github.com"],
+  policy = defaultPolicy,
+  make
+};
+
+let main = () => { serve(definition) };

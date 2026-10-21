@@ -1,0 +1,68 @@
+-- OscGoesBrrr: connects VRChat avatars (OSC) to Intiface/Buttplug devices.
+-- Upstream's Linux AppImage plus the logo it is built with.
+from "../../../wm-mini/tooling/pakman/src/model.wm" import *;
+from "../../../wm-mini/tooling/pakman/src/package.wm" import { serveWithBuild };
+from "../../../wm-mini/tooling/pakman/src/finders.wm" import { githubReleases, releaseCandidates, stableReleases };
+from "../../../wm-mini/tooling/pakman/src/io.wm" import { runCapture };
+let repo = "OscToys/OscGoesBrrr";
+let appImage = (version) => { "OscGoesBrrr-linux-" ++ version ++ ".AppImage" };
+let versions = () => {
+  githubReleases(repo)
+    :> Task.map(releaseCandidates .{
+      ..stableReleases,
+      assets = (version) => { [appImage(version)] }
+    })
+};
+
+let make = (version, _) => {
+  let tag = "v" ++ version;
+  let raw = "https://raw.githubusercontent.com/" ++ repo ++ "/" ++ tag;
+  .{
+    version,
+    sources = [
+      source("repack.py", "file:///home/ellie/git/pak/paks/oscgoesbrrr/repack-no-autoscan.py"),
+      source("oscgoesbrrr.AppImage",
+        "https://github.com/" ++ repo ++ "/releases/download/" ++ tag ++ "/" ++ appImage(version)),
+      source("LICENSE", raw ++ "/LICENSE"),
+      source("oscgoesbrrr.png", raw ++ "/src/icons/ogb-logo.png")
+    ],
+    install = [
+      Build("no-autoscan", ["/usr/bin/python3", "/usr/bin/unsquashfs", "/usr/bin/mksquashfs"]),
+      Symlink(Own(".local/lib/oscgoesbrrr/oscgoesbrrr.AppImage"), ".local/bin/oscgoesbrrr"),
+      Install("oscgoesbrrr.png", ".local/share/icons/hicolor/512x512/apps/oscgoesbrrr.png", Data),
+      Install("LICENSE", ".local/share/licenses/oscgoesbrrr/LICENSE", Data),
+      userDesktopEntry("oscgoesbrrr", .{
+        title = "OscGoesBrrr",
+        comment = "Connect VRChat avatars to Intiface devices",
+        exec = cat([ref(Own(".local/bin/oscgoesbrrr")), lit(" %U")]),
+        icon = "oscgoesbrrr",
+        categories = ["Utility"],
+        terminal = false
+      })
+    ],
+    -- AppImages mount themselves with FUSE 2.
+    requires = [Base("/usr/lib/libfuse.so.2")]
+  }: Package
+};
+
+let definition: Definition = .{
+  name = "oscgoesbrrr",
+  description = "Connects VRChat avatars (OSC) to Intiface devices",
+  homepage = "https://github.com/OscToys/OscGoesBrrr",
+  license = "CC-BY-NC-SA-4.0",
+  target = Host,
+  scope = User,
+  versions,
+  hosts = ["api.github.com"],
+  policy = defaultPolicy,
+  make
+};
+
+let build = (ctx: BuildContext) => {
+  if (ctx.version != "2.1.30") { Task.fail("no-autoscan patch needs review for version " ++ ctx.version) } else {
+    runCapture("/usr/bin/python3", [ctx.inputs ++ "/repack.py", ctx.inputs ++ "/oscgoesbrrr.AppImage",
+      ctx.out ++ "/.local/lib/oscgoesbrrr/oscgoesbrrr.AppImage"])
+      :> Task.map((_) => { void })
+  }
+};
+let main = () => { serveWithBuild(definition, build) };

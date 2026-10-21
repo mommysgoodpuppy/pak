@@ -1,0 +1,11 @@
+{
+  "artifact": "/tmp/pakman-osc-build/store/e6a824b5a0778e899ea5f60d1d9ddbd0-oscgoesbrrr-2.1.30/.local/lib/oscgoesbrrr/oscgoesbrrr.AppImage",
+  "upstream_sha256": "10e87dc675187accd3cda82bd526167e1c2dbfa139a9c592e7d0158568b86196",
+  "output_sha256": "996104b4ced27ef8c67304a2143e32724a3fe9c110cd86abefb6138bb7d9df31",
+  "patched_module_sha256": "e4e84358a4a8927fe01cb8be34abc369cc0abcd787cd59a32c8d4481840b1149",
+  "validation": "PASS: original starts the scan timer; patched session does not; handshake, initial list, output routing and cleanup retained (mock transport).",
+  "runtime_preserved": true,
+  "asar_integrity_valid": true,
+  "installed_changed": false,
+  "limits": "No Electron launch, activation or hardware test"
+}

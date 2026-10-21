@@ -1,0 +1,46 @@
+-- Gale: mod manager for Thunderstore. Installs upstream's .deb payload as is,
+-- using the host's WebKitGTK (the AppImage would bundle its own).
+
+from "../../../wm-mini/tooling/pakman/src/model.wm" import *;
+from "../../../wm-mini/tooling/pakman/src/package.wm" import { serve };
+from "../../../wm-mini/tooling/pakman/src/finders.wm" import { githubReleases, releaseCandidates, stableReleases, matchText };
+
+let repo = "Kesomannen/gale";
+
+let deb = (version) => { "Gale_" ++ version ++ "_amd64.deb" };
+
+let versions = () => {
+  githubReleases(repo)
+    :> Task.map(releaseCandidates .{
+      ..stableReleases,
+      versionOf = matchText "^\\d+\\.\\d+\\.\\d+$",
+      assets = (version) => { [deb(version)] }
+    })
+};
+
+let make = (version, _) => {
+  Package(
+    version,
+    [source("gale.deb", "https://github.com/" ++ repo ++ "/releases/download/" ++ version ++ "/" ++ deb(version))],
+    [
+      -- The .deb's payload as is.
+      debPayload("gale.deb")
+    ],
+    [Base("/usr/lib/libwebkit2gtk-4.1.so.0")]
+  )
+};
+
+let definition: Definition = .{
+  name = "gale",
+  description = "Modern mod manager for Thunderstore",
+  homepage = "https://github.com/Kesomannen/gale",
+  license = "GPL-3.0-only",
+  target = Host,
+  scope = System,
+  versions,
+  hosts = ["api.github.com"],
+  policy = defaultPolicy,
+  make
+};
+
+let main = () => { serve(definition) };

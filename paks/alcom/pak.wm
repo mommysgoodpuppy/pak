@@ -1,0 +1,42 @@
+-- ALCOM: native graphical VPM client. Repackage upstream's amd64 Debian payload.
+-- GUI releases use gui-v tags; plain v tags belong to the vrc-get CLI.
+from "../../../wm-mini/tooling/pakman/src/model.wm" import *;
+from "../../../wm-mini/tooling/pakman/src/package.wm" import { serve };
+from "../../../wm-mini/tooling/pakman/src/finders.wm" import { githubReleases, releaseCandidates, stableReleases, matchText };
+
+let repo = "vrc-get/vrc-get";
+let deb = (version) => { "alcom_" ++ version ++ "-1_amd64.deb" };
+
+let versions = () => {
+  githubReleases(repo)
+    :> Task.map(releaseCandidates .{
+      ..stableReleases,
+      versionOf = matchText "^gui-v(\\d+\\.\\d+\\.\\d+)$",
+      assets = (version) => { [deb(version)] },
+      ref = (release, _) => { release.tag }
+    })
+};
+
+let make = (version, tag) => {
+  Package(
+    version,
+    [source("alcom.deb", "https://github.com/" ++ repo ++ "/releases/download/" ++ tag ++ "/" ++ deb(version))],
+    [debPayload("alcom.deb")],
+    [Base("/usr/lib/libwebkit2gtk-4.1.so.0"), Base("/usr/lib/libgtk-3.so.0")]
+  )
+};
+
+let definition: Definition = .{
+  name = "alcom",
+  description = "Native graphical VRChat project and package manager",
+  homepage = "https://vrc-get.anatawa12.com/en/alcom/",
+  license = "MIT",
+  target = Host,
+  scope = System,
+  versions,
+  hosts = ["api.github.com"],
+  policy = defaultPolicy,
+  make
+};
+
+let main = () => { serve(definition) };

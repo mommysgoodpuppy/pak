@@ -1,0 +1,50 @@
+-- AppImageLauncher: integrates AppImages into the desktop when first run.
+-- Upstream's .deb payload as is: a self-contained AppDir in
+-- /opt/appimagelauncher.AppDir, launchers in /usr/bin, and the binfmt.d entry
+-- that routes AppImages through it (pakman reloads binfmt, like the postinst).
+
+from "../../../wm-mini/tooling/pakman/src/model.wm" import *;
+from "../../../wm-mini/tooling/pakman/src/package.wm" import { serve };
+from "../../../wm-mini/tooling/pakman/src/finders.wm" import { githubReleases, releaseCandidates, stableReleases, matchText, ReleaseAsset };
+
+let repo = "TheAssassin/AppImageLauncher";
+
+-- The .deb's name doesn't follow the tag (v3.0.0-beta-3 ships
+-- appimagelauncher_3.0.0-beta-2-gha287.96cb937_amd64.deb), so it is the ref.
+let isDeb = (asset: ReleaseAsset) => {
+  Option.isSome(matchText("^appimagelauncher_.+_amd64\\.deb$")(asset.name))
+};
+
+let versions = () => {
+  githubReleases(repo)
+    :> Task.map(releaseCandidates .{
+      ..stableReleases,
+      versionOf = matchText "^v(\\d+\\.\\d+\\.\\d+.*)$",
+      accept = (release) => { List.any(release.assets, isDeb) },
+      ref = (release, _) => { List.find(release.assets, isDeb) :> Option.map((asset: ReleaseAsset) => { asset.name }) :> Option.withDefault("") }
+    })
+};
+
+let make = (version, deb) => {
+  Package(
+    version,
+    [source("appimagelauncher.deb", "https://github.com/" ++ repo ++ "/releases/download/v" ++ version ++ "/" ++ deb)],
+    [debPayload("appimagelauncher.deb")],
+    []
+  )
+};
+
+let definition: Definition = .{
+  name = "appimagelauncher",
+  description = "Integrates AppImages into the desktop when first run",
+  homepage = "https://github.com/TheAssassin/AppImageLauncher",
+  license = "MIT",
+  target = Host,
+  scope = System,
+  versions,
+  hosts = ["api.github.com"],
+  policy = defaultPolicy,
+  make
+};
+
+let main = () => { serve(definition) };

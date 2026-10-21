@@ -1,0 +1,30 @@
+from "../../../wm-mini/tooling/pakman-subsetml/src/model.wm" import * as M;
+from "../../../wm-mini/tooling/pakman-subsetml/src/package.wm" import * as Package;
+
+let revision = "323d93b29bd89a2cb446de90c4ed4fea1764176e";
+let pinnedVersion = "0.0.1-323d93b29bd8";
+let upstream = "https://raw.githubusercontent.com/antirez/kilo/" ++ revision ++ "/";
+let download = (name) => {
+  M.Build("/usr/bin/curl", [M.Literal("-fsSL"),
+    M.Literal("--connect-timeout"), M.Literal("15"),
+    M.Literal("--max-time"), M.Literal("60"),
+    M.Literal(upstream ++ name), M.Literal("-o"), M.Work(name)])
+};
+let definition: M.Definition = M.Definition {
+  name = "kilo",
+  description = "Kilo terminal editor, built from pinned upstream C source on PS2",
+  make = (version, _) => {
+    M.Package(pinnedVersion, [M.Source("SHA256SUMS", "SHA256SUMS")], [
+      download("kilo.c"),
+      download("LICENSE"),
+      M.Build("/usr/bin/sha256sum", [M.Literal("-c"), M.Input("SHA256SUMS")]),
+      M.Build("/usr/bin/gcc", [M.Literal("-std=c99"), M.Literal("-O0"),
+        M.Literal("-g0"), M.Literal("-Wall"), M.Literal("-Wextra"),
+        M.Work("kilo.c"), M.Literal("-o"), M.Out("kilo")]),
+      M.Build("/bin/cp", [M.Work("LICENSE"), M.Out("LICENSE")]),
+      M.Install("kilo", "bin/kilo", M.Exec),
+      M.Install("LICENSE", "share/licenses/kilo/LICENSE", M.Data)
+    ])
+  }
+};
+let main = () => { Package.serve(definition) };

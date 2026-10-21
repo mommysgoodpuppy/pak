@@ -1,0 +1,81 @@
+# Emacs 20.7 PS2 Linux/musl target feature profile.
+# Derived from compile/link probes using the matching R5900 GCC 15.2.0,
+# musl and ncurses 6.5 development toolchain; editor execution checked in
+# R5900 emulation. These are NOT all native configure-probe results.
+# Compiler identity, compiler execution and tool paths are detected afresh.
+# Runtime localtime caching uses configure's conservative cross-build answer.
+# Use PAKMAN_EMACS_CONFIG_CACHE=none to run all feature probes on the console.
+ac_cv_c_const=${ac_cv_c_const=yes}
+ac_cv_decl_sys_siglist=${ac_cv_decl_sys_siglist=no}
+ac_cv_func_alloca_works=${ac_cv_func_alloca_works=yes}
+ac_cv_func_bcmp=${ac_cv_func_bcmp=yes}
+ac_cv_func_bcopy=${ac_cv_func_bcopy=yes}
+ac_cv_func_cbrt=${ac_cv_func_cbrt=yes}
+ac_cv_func_closedir=${ac_cv_func_closedir=yes}
+ac_cv_func_dup2=${ac_cv_func_dup2=yes}
+ac_cv_func_euidaccess=${ac_cv_func_euidaccess=yes}
+ac_cv_func_fmod=${ac_cv_func_fmod=yes}
+ac_cv_func_fpathconf=${ac_cv_func_fpathconf=yes}
+ac_cv_func_frexp=${ac_cv_func_frexp=yes}
+ac_cv_func_ftime=${ac_cv_func_ftime=yes}
+ac_cv_func_getcwd=${ac_cv_func_getcwd=yes}
+ac_cv_func_getdomainname=${ac_cv_func_getdomainname=yes}
+ac_cv_func_gethostname=${ac_cv_func_gethostname=yes}
+ac_cv_func_getpagesize=${ac_cv_func_getpagesize=yes}
+ac_cv_func_getpt=${ac_cv_func_getpt=no}
+ac_cv_func_gettimeofday=${ac_cv_func_gettimeofday=yes}
+ac_cv_func_grantpt=${ac_cv_func_grantpt=yes}
+ac_cv_func_logb=${ac_cv_func_logb=yes}
+ac_cv_func_lrand48=${ac_cv_func_lrand48=yes}
+ac_cv_func_malloc_get_state=${ac_cv_func_malloc_get_state=no}
+ac_cv_func_malloc_set_state=${ac_cv_func_malloc_set_state=no}
+ac_cv_func_mkdir=${ac_cv_func_mkdir=yes}
+ac_cv_func_mktime=${ac_cv_func_mktime=yes}
+ac_cv_func_random=${ac_cv_func_random=yes}
+ac_cv_func_rename=${ac_cv_func_rename=yes}
+ac_cv_func_res_init=${ac_cv_func_res_init=yes}
+ac_cv_func_rint=${ac_cv_func_rint=yes}
+ac_cv_func_rmdir=${ac_cv_func_rmdir=yes}
+ac_cv_func_select=${ac_cv_func_select=yes}
+ac_cv_func_setlocale=${ac_cv_func_setlocale=yes}
+ac_cv_func_setpgid=${ac_cv_func_setpgid=yes}
+ac_cv_func_setrlimit=${ac_cv_func_setrlimit=yes}
+ac_cv_func_setsid=${ac_cv_func_setsid=yes}
+ac_cv_func_shutdown=${ac_cv_func_shutdown=yes}
+ac_cv_func_socket=${ac_cv_func_socket=yes}
+ac_cv_func_strerror=${ac_cv_func_strerror=yes}
+ac_cv_func_strftime=${ac_cv_func_strftime=yes}
+ac_cv_func_sysinfo=${ac_cv_func_sysinfo=yes}
+ac_cv_func_tzset=${ac_cv_func_tzset=yes}
+ac_cv_func_utimes=${ac_cv_func_utimes=yes}
+ac_cv_header_alloca_h=${ac_cv_header_alloca_h=yes}
+ac_cv_header_arpa_inet_h=${ac_cv_header_arpa_inet_h=yes}
+ac_cv_header_limits_h=${ac_cv_header_limits_h=yes}
+ac_cv_header_linux_version_h=${ac_cv_header_linux_version_h=yes}
+ac_cv_header_netinet_in_h=${ac_cv_header_netinet_in_h=yes}
+ac_cv_header_stdc=${ac_cv_header_stdc=yes}
+ac_cv_header_string_h=${ac_cv_header_string_h=yes}
+ac_cv_header_sys_select_h=${ac_cv_header_sys_select_h=yes}
+ac_cv_header_sys_systeminfo_h=${ac_cv_header_sys_systeminfo_h=no}
+ac_cv_header_sys_time_h=${ac_cv_header_sys_time_h=yes}
+ac_cv_header_sys_timeb_h=${ac_cv_header_sys_timeb_h=yes}
+ac_cv_header_termios_h=${ac_cv_header_termios_h=yes}
+ac_cv_header_time=${ac_cv_header_time=yes}
+ac_cv_header_unistd_h=${ac_cv_header_unistd_h=yes}
+ac_cv_header_utime_h=${ac_cv_header_utime_h=yes}
+ac_cv_lib_Xbsd_main=${ac_cv_lib_Xbsd_main=no}
+ac_cv_lib_dnet_dnet_ntoa=${ac_cv_lib_dnet_dnet_ntoa=no}
+ac_cv_lib_intl_dgettext=${ac_cv_lib_intl_dgettext=no}
+ac_cv_lib_m_sqrt=${ac_cv_lib_m_sqrt=yes}
+ac_cv_lib_mail_maillock=${ac_cv_lib_mail_maillock=no}
+ac_cv_lib_ncurses_tparm=${ac_cv_lib_ncurses_tparm=yes}
+ac_cv_lib_pthreads_cma_open=${ac_cv_lib_pthreads_cma_open=no}
+ac_cv_struct_tm=${ac_cv_struct_tm=time.h}
+ac_cv_struct_tm_zone=${ac_cv_struct_tm_zone=yes}
+ac_cv_type_signal=${ac_cv_type_signal=void}
+emacs_cv_gettimeofday_two_arguments=${emacs_cv_gettimeofday_two_arguments=yes}
+emacs_cv_localtime_cache=${emacs_cv_localtime_cache=yes}
+emacs_cv_netdb_declares_h_errno=${emacs_cv_netdb_declares_h_errno=yes}
+emacs_cv_struct_timeval=${emacs_cv_struct_timeval=yes}
+emacs_cv_struct_utimbuf=${emacs_cv_struct_utimbuf=yes}
+emacs_cv_var___after_morecore_hook=${emacs_cv_var___after_morecore_hook=no}

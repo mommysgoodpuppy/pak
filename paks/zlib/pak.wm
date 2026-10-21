@@ -1,0 +1,14 @@
+from "../../../wm-mini/tooling/pakman-subsetml/src/model.wm" import * as M;
+from "../../../wm-mini/tooling/pakman-subsetml/src/package.wm" import * as Package;
+
+let definition: M.Definition = M.Definition {
+  name = "zlib",
+  description = "zlib built natively on PS2",
+  make = (_, _) => {
+    M.Package("1.3.1-ps2.1", [M.Source("build.sh", "build.sh"), M.Source("SHA256SUMS", "SHA256SUMS")], [
+      M.Build("/bin/sh", [M.Input("build.sh"), M.Input("SHA256SUMS"), M.Out("payload")]),
+      M.Install("payload/libz.a", "lib/libz.a", M.Data), M.Install("payload/zlib.h", "include/zlib.h", M.Data), M.Install("payload/zconf.h", "include/zconf.h", M.Data), M.Install("payload/zlib.pc", "lib/pkgconfig/zlib.pc", M.Data), M.Install("payload/LICENSE", "share/licenses/zlib/LICENSE", M.Data)
+    ])
+  }
+};
+let main = () => { Package.serve(definition) };

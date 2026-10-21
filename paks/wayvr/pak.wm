@@ -1,0 +1,62 @@
+-- WayVR: your desktop inside VR (SteamVR/Monado, OpenVR and OpenXR).
+-- Upstream's prebuilt binaries from GitHub releases, plus the desktop file and
+-- icons from the repository at the same tag, where the AUR package installs them.
+
+from "../../../wm-mini/tooling/pakman/src/model.wm" import *;
+from "../../../wm-mini/tooling/pakman/src/package.wm" import { serve };
+from "../../../wm-mini/tooling/pakman/src/finders.wm" import { githubReleases, releaseCandidates, stableReleases };
+
+let repo = "wayvr-org/wayvr";
+
+let versions = () => {
+  githubReleases(repo)
+    :> Task.map(releaseCandidates .{
+      ..stableReleases,
+      assets = (_) => { ["wayvr", "wayvrctl"] }
+    })
+};
+
+let make = (version, _) => {
+  let release = "https://github.com/" ++ repo ++ "/releases/download/v" ++ version ++ "/";
+  let tree = "https://raw.githubusercontent.com/" ++ repo ++ "/v" ++ version ++ "/wayvr/";
+  Package(
+    version,
+    [
+      source("wayvr", release ++ "wayvr"),
+      source("wayvrctl", release ++ "wayvrctl"),
+      source("wayvr.desktop", tree ++ "wayvr.desktop"),
+      source("wayvr.png", tree ++ "wayvr.png"),
+      source("wayvr.svg", tree ++ "wayvr.svg")
+    ],
+    [
+      Install("wayvr", "usr/bin/wayvr", Exec),
+      Install("wayvrctl", "usr/bin/wayvrctl", Exec),
+      Install("wayvr.desktop", "usr/share/applications/wayvr.desktop", Data),
+      Install("wayvr.png", "usr/share/icons/hicolor/128x128/apps/wayvr.png", Data),
+      Install("wayvr.svg", "usr/share/icons/hicolor/scalable/apps/wayvr.svg", Data)
+    ],
+    -- The VR runtimes' loaders and the less common libraries the binary links.
+    [
+      Base("/usr/lib/libopenxr_loader.so.1"),
+      Base("/usr/lib/libopenvr_api.so"),
+      Base("/usr/lib/libdav1d.so.7"),
+      Base("/usr/lib/libinput.so.10"),
+      Base("/usr/lib/libpipewire-0.3.so.0")
+    ]
+  )
+};
+
+let definition: Definition = .{
+  name = "wayvr",
+  description = "Your desktop in VR (SteamVR/Monado, OpenVR+OpenXR)",
+  homepage = "https://github.com/wayvr-org/wayvr",
+  license = "GPL-3.0-or-later",
+  target = Host,
+  scope = System,
+  versions,
+  hosts = ["api.github.com"],
+  policy = defaultPolicy,
+  make
+};
+
+let main = () => { serve(definition) };

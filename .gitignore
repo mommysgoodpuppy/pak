@@ -1,0 +1,9 @@
+.build/
+node_modules/
+research/
+_scratch/
+*.wm_cache*
+*.wm-mini*
+.env
+.env.*
+!.env.example

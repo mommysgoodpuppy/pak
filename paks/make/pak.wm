@@ -1,0 +1,14 @@
+from "../../../wm-mini/tooling/pakman-subsetml/src/model.wm" import * as M;
+from "../../../wm-mini/tooling/pakman-subsetml/src/package.wm" import * as Package;
+
+let definition: M.Definition = M.Definition {
+  name = "make",
+  description = "make built natively on PS2",
+  make = (_, _) => {
+    M.Package("4.4.1-ps2.1", [M.Source("build.sh", "build.sh"), M.Source("SHA256SUMS", "SHA256SUMS"), M.Source("ps2-musl.cache", "ps2-musl.cache")], [
+      M.Build("/bin/sh", [M.Input("build.sh"), M.Input("SHA256SUMS"), M.Out("payload"), M.Input("ps2-musl.cache")]),
+      M.Install("payload/make", "bin/make", M.Exec), M.Install("payload/make.h", "include/gnumake.h", M.Data), M.Install("payload/COPYING", "share/licenses/make/COPYING", M.Data)
+    ])
+  }
+};
+let main = () => { Package.serve(definition) };

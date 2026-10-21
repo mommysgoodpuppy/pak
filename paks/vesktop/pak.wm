@@ -1,0 +1,45 @@
+-- Vesktop: Discord client with Vencord built in. Installs upstream's .deb
+-- payload as is (/opt/Vesktop), plus the /usr/bin link its postinst makes.
+
+from "../../../wm-mini/tooling/pakman/src/model.wm" import *;
+from "../../../wm-mini/tooling/pakman/src/package.wm" import { serve };
+from "../../../wm-mini/tooling/pakman/src/finders.wm" import { githubReleases, releaseCandidates, stableReleases };
+
+let repo = "Vencord/Vesktop";
+
+let deb = (version) => { "vesktop_" ++ version ++ "_amd64.deb" };
+
+let versions = () => {
+  githubReleases(repo)
+    :> Task.map(releaseCandidates .{
+      ..stableReleases,
+      assets = (version) => { [deb(version)] }
+    })
+};
+
+let make = (version, _) => {
+  Package(
+    version,
+    [source("vesktop.deb", "https://github.com/" ++ repo ++ "/releases/download/v" ++ version ++ "/" ++ deb(version))],
+    [
+      debPayload("vesktop.deb"),
+      Symlink(Own("opt/Vesktop/vesktop"), "usr/bin/vesktop")
+    ],
+    [Base("/usr/lib/libgtk-3.so.0"), Base("/usr/lib/libnss3.so")]
+  )
+};
+
+let definition: Definition = .{
+  name = "vesktop",
+  description = "Discord client with Vencord built in",
+  homepage = "https://github.com/Vencord/Vesktop",
+  license = "GPL-3.0-only",
+  target = Host,
+  scope = System,
+  versions,
+  hosts = ["api.github.com"],
+  policy = defaultPolicy,
+  make
+};
+
+let main = () => { serve(definition) };

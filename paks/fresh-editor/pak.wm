@@ -1,0 +1,55 @@
+-- Fresh's upstream GNU/Linux x86_64 binary, managed by pakman.
+from "../../../wm-mini/tooling/pakman/src/model.wm" import *;
+from "../../../wm-mini/tooling/pakman/src/package.wm" import { serve };
+from "../../../wm-mini/tooling/pakman/src/finders.wm" import { githubReleases, releaseCandidates, stableReleases };
+
+let repo = "sinelaw/fresh";
+let bundle = "fresh-editor-x86_64-unknown-linux-gnu";
+let archive = bundle ++ ".tar.xz";
+
+let versions = () => {
+  githubReleases(repo)
+    :> Task.map(releaseCandidates .{
+      ..stableReleases,
+      assets = (_) => { [archive] }
+    })
+};
+
+let make = (version, _) => {
+  Package(
+    version,
+    [source(archive, "https://github.com/" ++ repo ++ "/releases/download/v" ++ version ++ "/" ++ archive)],
+    [
+      extractMembers(archive, [bundle ++ "/fresh"], "usr/share/fresh-editor", 1),
+      Symlink(Own("usr/share/fresh-editor/fresh"), "usr/bin/fresh"),
+      WriteText("usr/share/fresh-editor/install-receipt.toml", lines([
+        "schema = 1",
+        "channel = \"local-package\"",
+        "version = \"" ++ version ++ "\"",
+        "package_name = \"fresh-editor\"",
+        "managed = true",
+        "self_update = false"
+      ]), Data),
+      extractMembers(archive, [bundle ++ "/README.md", bundle ++ "/CHANGELOG.md"], "usr/share/doc/fresh-editor", 1),
+      extractMembers(archive, [bundle ++ "/LICENSE"], "usr/share/licenses/fresh-editor", 1),
+      extractMembers(archive, [bundle ++ "/fresh.desktop"], "usr/share/applications", 1),
+      extractMembers(archive, [bundle ++ "/icons"], "usr/share/icons/hicolor", 2)
+    ],
+    [Base("/usr/lib/libgcc_s.so.1"), Base("/usr/lib/libm.so.6"), Base("/usr/lib/libc.so.6")]
+  )
+};
+
+let definition: Definition = .{
+  name = "fresh-editor",
+  description = "Fast terminal text editor with LSP support and TypeScript plugins",
+  homepage = "https://sinelaw.github.io/fresh/",
+  license = "GPL-3.0-or-later",
+  target = Host,
+  scope = System,
+  versions,
+  hosts = ["api.github.com"],
+  policy = defaultPolicy,
+  make
+};
+
+let main = () => { serve(definition) };

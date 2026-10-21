@@ -1,0 +1,47 @@
+-- xr-hardware: udev rules giving the logged-in user access to VR and AR
+-- devices. Upstream commits the generated rules file; this is the file the AUR
+-- package's `make install_package` installs.
+
+from "../../../wm-mini/tooling/pakman/src/model.wm" import *;
+from "../../../wm-mini/tooling/pakman/src/package.wm" import { serve };
+from "../../../wm-mini/tooling/pakman/src/finders.wm" import { gitlabTags, Tag };
+from js.module("../../../wm-mini/tooling/pakman/src/host.ts") import unsafe { captures: (String, String) -> Js.Array<String> };
+
+let host = "gitlab.freedesktop.org";
+let project = "monado/utilities/xr-hardware";
+
+let isRelease = (name) => { Js.Array.toList(captures("^\\d+\\.\\d+\\.\\d+$", name)) != [] };
+
+let versions = () => {
+  gitlabTags(host, project)
+    :> Task.map((tags) => {
+      tags :> List.mapPartial((t: Tag) => {
+        if (isRelease(t.name)) { Some(Candidate(t.name, t.published, "stable", [], "")) } else { None }
+      })
+    })
+};
+
+let make = (version, _) => {
+  let rules = "70-xrhardware.rules";
+  Package(
+    version,
+    [source(rules, "https://" ++ host ++ "/" ++ project ++ "/-/raw/" ++ version ++ "/" ++ rules)],
+    [Install(rules, "usr/lib/udev/rules.d/" ++ rules, Data)],
+    []
+  )
+};
+
+let definition: Definition = .{
+  name = "xr-hardware",
+  description = "udev rules for VR and AR devices",
+  homepage = "https://gitlab.freedesktop.org/monado/utilities/xr-hardware",
+  license = "BSL-1.0",
+  target = Host,
+  scope = System,
+  versions,
+  hosts = [host],
+  policy = defaultPolicy,
+  make
+};
+
+let main = () => { serve(definition) };

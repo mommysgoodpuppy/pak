@@ -1,0 +1,70 @@
+-- Unity Hub: upstream's official Debian payload, without apt setup or postinst.
+-- The editor is separate: use Hub to install VRChat's required 2022.3.22f1.
+from "../../../wm-mini/tooling/pakman/src/model.wm" import *;
+from "../../../wm-mini/tooling/pakman/src/package.wm" import { serve };
+from "../../../wm-mini/tooling/pakman/src/finders.wm" import { redirectTarget };
+from "../../../wm-mini/tooling/pakman/src/io.wm" import { fetchText, series };
+from js.module("../../../wm-mini/tooling/pakman/src/host.ts") import unsafe { captures: (String, String) -> Js.Array<String> };
+
+record UpstreamPackage = { version: String, filename: String, sha256: String };
+from js.module("./upstream.ts") import unsafe { packages: String -> Js.Value };
+
+let repository = "https://hub.unity3d.com/linux/repos/deb/";
+let index = repository ++ "dists/stable/main/binary-amd64/Packages";
+
+-- Date each of the newest eight stable releases using the artifact's Last-Modified.
+-- Pakman applies its normal minimum age and checks the index's SHA-256 at resolve.
+let dated = (entry: UpstreamPackage) => {
+  let url = repository ++ entry.filename;
+  redirectTarget(url)
+    :> Task.map((_, modified) => {
+      Candidate(entry.version, modified, "stable", [Checksum(url, entry.sha256)], entry.filename)
+    })
+};
+
+let versions = () => {
+  fetchText(index)
+    :> Task.andThen((text) => {
+      let parsed: Result<Js.Array<UpstreamPackage>, String> = packages(text)
+        :> Json.assert :> Result.mapErr((_) => { "invalid Unity Hub package index" });
+      parsed :> Task.fromResult :> Task.andThen((items) => {
+        let entries = items :> Js.Array.toList :> List.take(8);
+        series(entries, dated)
+      })
+    })
+};
+
+let make = (version, filename) => {
+  -- Forge packages ship /usr/lib/unityhub and the launcher symlink themselves.
+  -- Older fpm packages use /opt/unityhub and create the symlink in postinst.
+  let forge = Js.Array.toList(captures("/UnityHubSetup-[^/]+\\.deb$", filename)) != [];
+  let payload = if (forge) {
+    [debPayload("unityhub.deb")]
+  } else {
+    [debPayload("unityhub.deb"),
+      Symlink(Own("opt/unityhub/unityhub"), "usr/bin/unityhub")]
+  };
+  Package(
+    version,
+    [source("unityhub.deb", repository ++ filename)],
+    payload,
+    [Base("/usr/lib/libgtk-3.so.0"), Base("/usr/lib/libnss3.so"),
+      Base("/usr/lib/libsecret-1.so.0"), Base("/usr/lib/libgbm.so.1"),
+      Base("/usr/lib/libnotify.so.4"), Base("/usr/bin/xdg-open")]
+  )
+};
+
+let definition: Definition = .{
+  name = "unityhub",
+  description = "Unity Hub: editor installation and license management",
+  homepage = "https://unity.com/download",
+  license = "custom:Unity",
+  target = Host,
+  scope = System,
+  versions,
+  hosts = ["hub.unity3d.com", "hub-dist.unity3d.com"],
+  policy = defaultPolicy,
+  make
+};
+
+let main = () => { serve(definition) };

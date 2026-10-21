@@ -1,0 +1,53 @@
+-- Deno: official Linux binaries, installed per user.
+
+from "pakman/model.wm" import *;
+from "pakman/package.wm" import { serve };
+from "pakman/finders.wm" import { githubReleases, releaseCandidates, stableReleases };
+from js.global("Deno.build") import unsafe { os: String, arch: String };
+
+let platform = if (os != "linux") { Panic("deno: this recipe currently supports Linux") } else {
+  match(arch) {
+    "x86_64" => { "x86_64-unknown-linux-gnu" },
+    "aarch64" => { "aarch64-unknown-linux-gnu" },
+    _ => { Panic("deno: unsupported architecture " ++ arch) }
+  }
+};
+
+let asset = "deno-" ++ platform ++ ".zip";
+
+let versions = () => {
+  githubReleases("denoland/deno")
+    :> Task.map(releaseCandidates .{
+      ..stableReleases,
+      assets = (_) => { [asset] }
+    })
+};
+
+let make = (version, _) => {
+  .{
+    version,
+    sources = [
+      source("deno.zip", "https://github.com/denoland/deno/releases/download/v" ++ version ++ "/" ++ asset)
+    ],
+    install = [
+      extract("deno.zip", ".local/lib/deno", 0),
+      Symlink(Own(".local/lib/deno/deno"), ".local/bin/deno")
+    ],
+    requires = []
+  }: Package
+};
+
+let definition: Definition = .{
+  name = "deno",
+  description = "Deno JavaScript runtime (official binaries)",
+  homepage = "https://deno.com",
+  license = "MIT",
+  target = Host,
+  scope = User,
+  versions,
+  hosts = ["api.github.com"],
+  policy = defaultPolicy,
+  make
+};
+
+let main = () => { serve(definition) };

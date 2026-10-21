@@ -1,0 +1,31 @@
+-- Discovery facts must survive into the installation plan, even when URLs
+-- cannot be reconstructed from version strings.
+from "../../../wm-mini/tooling/testman/test.wm" import *;
+from js.global("JSON") import { parse } as JSON;
+from "./pak.wm" import { candidateOf, make };
+from "../../../wm-mini/tooling/pakman/src/model.wm" import { source };
+
+let index = JSON.parse("{\"1.2.3\": {\"date\": \"2020-01-01\", \"x86_64-linux\": {\"tarball\": \"https://example.invalid/archives/unusual-stable-name.tar.xz\", \"shasum\": \"stable-checksum\", \"size\": \"123\"}}, \"master\": {\"version\": \"9.9.9-dev.42+abc\", \"date\": \"2020-01-02\", \"x86_64-linux\": {\"tarball\": \"https://example.invalid/snapshots/another-unrelated-name.tar.xz\", \"shasum\": \"dev-checksum\", \"size\": \"456\"}}}");
+
+let preservesUrl = (key, version, channel, url) => {
+  test("Zig " ++ channel ++ " carries its discovered URL into make", () => {
+    let candidate = index
+      :> Result.mapErr((_) => { "invalid fixture" })
+      :> Result.andThen((body) => { candidateOf(body, key) });
+    assertOk(candidate)
+      :> Task.andThen((picked) => {
+        let plan = make(picked.version, picked.ref);
+        checks([
+          assertEqual(picked.version, version),
+          assertEqual(picked.channel, channel),
+          assertEqual(picked.ref, url),
+          assertEqual(plan.sources, [source("zig.tar.xz", url)])
+        ])
+      })
+  })
+};
+
+let tests = [
+  preservesUrl("1.2.3", "1.2.3", "stable", "https://example.invalid/archives/unusual-stable-name.tar.xz"),
+  preservesUrl("master", "9.9.9-dev.42+abc", "dev", "https://example.invalid/snapshots/another-unrelated-name.tar.xz")
+];

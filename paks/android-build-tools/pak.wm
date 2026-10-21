@@ -1,0 +1,124 @@
+-- Android SDK Build-Tools (aapt2, d8, apksigner, zipalign, ...), from Google's
+-- SDK repository, laid out where the AUR's android-sdk-build-tools puts them:
+-- /opt/android-sdk/build-tools/<version>, with the tools linked into /usr/bin.
+
+from "../../../wm-mini/tooling/pakman/src/model.wm" import *;
+from "../../../wm-mini/tooling/pakman/src/package.wm" import { serve };
+from "../../../wm-mini/tooling/pakman/src/finders.wm" import { redirectTarget };
+from "../../../wm-mini/tooling/pakman/src/io.wm" import { fetchText, series };
+from js.module("../../../wm-mini/tooling/pakman/src/host.ts") import unsafe {
+  captures: (String, String) -> Js.Array<String>,
+  capturesAll: (String, String) -> Js.Array<Js.Array<String>>
+};
+
+let repository = "https://dl.google.com/android/repository/";
+let index = repository ++ "repository2-3.xml";
+
+-- The index lists every build-tools release, newest first. Only the newest
+-- few get dated (one HEAD request each), which is all resolution looks at.
+let recent = 8;
+
+-- The repository's channels: 0 stable, 1 beta, 2 dev, 3 canary. Release
+-- candidates (37.0.0-rc2) are listed as stable too; they go in "preview".
+let channelName = (version, id) => {
+  if (Js.Array.toList(captures("-rc\\d+$", version)) != []) {
+    "preview"
+  } else {
+    match(id) { "0" => { "stable" }, "1" => { "beta" }, "2" => { "dev" }, _ => { "canary" } }
+  }
+};
+
+let first = (pattern, text) => {
+  match(Js.Array.toList(captures(pattern, text))) { [_, found, .._] => { found }, _ => { "" } }
+};
+
+-- (version, channel, linux archive file name) for each build-tools package.
+let listed = (xml) => {
+  capturesAll("<remotePackage path=\"build-tools;([^\"]+)\">([\\s\\S]*?)</remotePackage>", xml)
+    :> Js.Array.toList
+    :> List.mapPartial((m) => {
+      match(Js.Array.toList(m)) {
+        [_, version, body] => {
+          let archive = first("<url>([^<]+)</url>\\s*</complete>\\s*<host-os>linux</host-os>", body);
+          if (archive == "") { None } else { Some((version, channelName(version, first("<channelRef ref=\"channel-(\\d)\"", body)), archive)) }
+        },
+        _ => { None }
+      }
+    })
+    :> List.take(recent)
+};
+
+-- Google publishes only SHA-1 checksums, which pakman doesn't verify against,
+-- so the archive's hash is pinned from the first download. The archive's file
+-- name is irregular (build-tools_r37_linux.zip, build-tools_r19.1-linux.zip),
+-- so it travels as the candidate's ref.
+let dated = (version, channel, archive) => {
+  redirectTarget(repository ++ archive)
+    :> Task.map((_, modified) => { Candidate(version, modified, channel, [], archive) })
+};
+
+let versions = () => {
+  fetchText(index)
+    :> Task.andThen((xml) => { series(listed(xml), dated) })
+};
+
+-- 37.0.0-rc2 -> ("37", "0", "0")
+let revision = (version) => {
+  match(Js.Array.toList(captures("^(\\d+)\\.(\\d+)\\.(\\d+)", version))) {
+    [_, major, minor, micro] => { (major, minor, micro) },
+    _ => { (version, "0", "0") }
+  }
+};
+
+-- What sdkmanager records for an installed package, so Gradle and sdkmanager
+-- recognize this directory.
+let packageXml = (version) => {
+  match(revision(version)) {
+    (Var(major), Var(minor), Var(micro)) => {
+      lines([
+        "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>"
+          ++ "<ns2:repository xmlns:ns2=\"http://schemas.android.com/repository/android/common/02\""
+          ++ " xmlns:ns5=\"http://schemas.android.com/repository/android/generic/02\">"
+          ++ "<localPackage path=\"build-tools;" ++ version ++ "\" obsolete=\"false\">"
+          ++ "<type-details xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\" xsi:type=\"ns5:genericDetailsType\"/>"
+          ++ "<revision><major>" ++ major ++ "</major><minor>" ++ minor ++ "</minor><micro>" ++ micro ++ "</micro></revision>"
+          ++ "<display-name>Android SDK Build-Tools " ++ version ++ "</display-name>"
+          ++ "</localPackage></ns2:repository>"
+      ])
+    }
+  }
+};
+
+-- The tools the AUR package links into /usr/bin (lld is left out: extra/lld has it).
+let tools = ["aapt", "aapt2", "aidl", "apksigner", "bcc_compat", "d8", "dexdump", "llvm-rs-cc", "split-select", "zipalign"];
+
+let make = (version, archive) => {
+  let dir = "opt/android-sdk/build-tools/" ++ version;
+  let link = (tool) => { Symlink(Own(dir ++ "/" ++ tool), "usr/bin/" ++ tool) };
+  Package(
+    version,
+    [source("build-tools.zip", repository ++ archive)],
+    [
+      -- android-37.0/aapt2 -> opt/android-sdk/build-tools/37.0.0/aapt2
+      extract("build-tools.zip", dir, 1),
+      WriteText(dir ++ "/package.xml", packageXml(version), Data),
+      ..List.map(tools, link)
+    ],
+    []
+  )
+};
+
+let definition: Definition = .{
+  name = "android-build-tools",
+  description = "Android SDK Build-Tools (aapt2, d8, apksigner, zipalign)",
+  homepage = "https://developer.android.com/tools/releases/build-tools",
+  license = "custom:android-sdk-license",
+  target = Host,
+  scope = System,
+  versions,
+  hosts = ["dl.google.com"],
+  policy = defaultPolicy,
+  make
+};
+
+let main = () => { serve(definition) };

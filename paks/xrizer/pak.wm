@@ -1,0 +1,56 @@
+-- xrizer: OpenVR on top of OpenXR, so SteamVR games run on Monado or WiVRn.
+-- Upstream's release build in /opt/xrizer, where the AUR package puts it,
+-- plus the openvrpaths.vrpath that points OpenVR at it.
+
+from "../../../wm-mini/tooling/pakman/src/model.wm" import *;
+from "../../../wm-mini/tooling/pakman/src/package.wm" import { serve };
+from "../../../wm-mini/tooling/pakman/src/finders.wm" import { githubReleases, releaseCandidates, stableReleases, matchText };
+
+let repo = "Supreeeme/xrizer";
+
+let zip = (version) => { "xrizer-v" ++ version ++ ".zip" };
+
+let versions = () => {
+  githubReleases(repo)
+    :> Task.map(releaseCandidates .{
+      ..stableReleases,
+      versionOf = matchText "^v(\\d+\\.\\d+(?:\\.\\d+)?)$",
+      assets = (version) => { [zip(version)] }
+    })
+};
+
+let make = (version, _) => {
+  Package(
+    version,
+    [source("xrizer.zip", "https://github.com/" ++ repo ++ "/releases/download/v" ++ version ++ "/" ++ zip(version))],
+    [
+      -- xrizer-v0.5/bin/linux64/vrclient.so -> opt/xrizer/bin/linux64/vrclient.so
+      extract("xrizer.zip", "opt/xrizer", 1),
+      WriteText("opt/xrizer/openvrpaths.vrpath", lines([
+        "{",
+        "  \"jsonid\": \"vrpathreg\",",
+        "  \"runtime\": [",
+        "    \"/opt/xrizer\"",
+        "  ],",
+        "  \"version\": 1",
+        "}"
+      ]), Data)
+    ],
+    []
+  )
+};
+
+let definition: Definition = .{
+  name = "xrizer",
+  description = "OpenVR implementation on top of OpenXR",
+  homepage = "https://github.com/Supreeeme/xrizer",
+  license = "GPL-3.0-or-later",
+  target = Host,
+  scope = System,
+  versions,
+  hosts = ["api.github.com"],
+  policy = defaultPolicy,
+  make
+};
+
+let main = () => { serve(definition) };

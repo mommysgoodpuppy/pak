@@ -1,0 +1,12 @@
+--- a/src/main/IntifaceSession.ts
++++ b/src/main/IntifaceSession.ts
+@@ -63,7 +63,8 @@
+ 
+         this.connected = true;
+         if (this.initialDeviceList) this.emit('deviceList', this.initialDeviceList);
+-        this.startScanTimer();
++        // Discovery is managed manually in Intiface Central.
++        // Keep the existing device-list and output-command connection.
+     }
+ 
+     dispose(terminate = true) {

@@ -1,0 +1,92 @@
+-- Zig, from the official builds. Meant to cover what zvm does:
+--   pakman versions zig                    zvm ls --all
+--   pakman install zig                     newest stable release (age-gated)
+--   pakman install --pin zig@0.14.1        zvm i 0.14.1 (explicitly pinned)
+--   pakman install zig@dev                 zvm i master (follows master on update)
+--   --root DIR                         another version in another root
+--
+-- The index publishes a sha256 for every tarball, so every download is
+-- verified against upstream, not only pinned on first sight.
+
+from "../../../wm-mini/tooling/pakman/src/model.wm" import *;
+from "../../../wm-mini/tooling/pakman/src/package.wm" import { serve };
+from "../../../wm-mini/tooling/pakman/src/finders.wm" import { fetchJson };
+from js.module("../../../wm-mini/tooling/pakman/src/host.ts") import { jsonField };
+from js.module("../../../wm-mini/tooling/pakman/src/host.ts") import unsafe {
+  jsonKeys: Js.Value -> Js.Array<String>,
+  jsonTextOr: (Js.Value, String) -> String
+};
+
+let index = "https://ziglang.org/download/index.json";
+let platform = "x86_64-linux";
+
+record ZigTarball = { tarball: String, shasum: String, size: String };
+
+let field = (value: Js.Value, key: String) => {
+  jsonField(value, key) :> Result.mapErr((_) => { "zig index: missing " ++ key })
+};
+
+-- One index entry as a candidate. "master" is the dev channel; its real
+-- version is inside the entry. Entries without a build for this platform are skipped.
+let candidateOf = (indexJson: Js.Value, key) => {
+  let entry = field(indexJson, key);
+  let tarball: Result<ZigTarball, String> = entry
+    :> Result.andThen((e) => { field(e, platform) })
+    :> Result.andThen((t) => { t :> Json.assert :> Result.mapErr((_) => { "zig index: bad tarball entry" }) });
+  let text = (name) => { entry :> Result.andThen((e) => { field(e, name) }) :> Result.map((v) => { jsonTextOr(v, "") }) };
+  let version = if (key == "master") { text("version") } else { Ok(key) };
+  let channel = if (key == "master") { "dev" } else { "stable" };
+  Result|version, text("date"), tarball|
+    :> Result.map((v, date, t) => { Candidate(v, date ++ "T00:00:00Z", channel, [Checksum(t.tarball, t.shasum)], t.tarball) })
+};
+
+let candidatesOf = (indexJson: Js.Value) => {
+  indexJson
+    :> jsonKeys
+    :> Js.Array.toList
+    :> List.mapPartial((key) => {
+      match(candidateOf(indexJson, key)) { Ok(c) => { Some(c) }, Err(_) => { None } }
+    })
+};
+
+let versions = () => {
+  fetchJson(index)
+    :> Task.map(candidatesOf)
+};
+
+-- Discovery preserves the index's exact tarball URL in ref. No filename or
+-- stable/development URL reconstruction is needed during installation.
+-- The release tree in ~/.local/lib/zig (zig next to lib/std) and
+-- ~/.local/bin/zig pointing at it; zig finds its standard library relative to
+-- the real path of the binary.
+let make = (version, tarballUrl) => {
+  if (tarballUrl == "") {
+    Panic("zig: missing tarball URL; run `wm pakman resolve zig` to refresh the lock")
+  } else {
+    Package(
+      version,
+      [source("zig.tar.xz", tarballUrl)],
+      [
+        extract("zig.tar.xz", ".local/lib/zig", 1),
+        Symlink(Own(".local/lib/zig/zig"), ".local/bin/zig")
+      ],
+      []
+    )
+  }
+};
+
+let definition: Definition = .{
+  name = "zig",
+  description = "Zig compiler and toolchain (official builds)",
+  homepage = "https://ziglang.org",
+  license = "MIT",
+  target = Host,
+  -- Per user, like zvm: no root needed.
+  scope = User,
+  versions,
+  hosts = ["ziglang.org"],
+  policy = defaultPolicy,
+  make
+};
+
+let main = () => { serve(definition) };

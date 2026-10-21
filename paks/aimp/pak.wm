@@ -1,0 +1,68 @@
+-- AIMP native Linux audio player (beta), installed exactly as upstream lays it
+-- out: /opt/aimp, its private libraries in /usr/lib, its own desktop files.
+
+from "../../../wm-mini/tooling/pakman/src/model.wm" import *;
+from "../../../wm-mini/tooling/pakman/src/package.wm" import { serve };
+from "../../../wm-mini/tooling/pakman/src/finders.wm" import { redirectTarget };
+from js.module("../../../wm-mini/tooling/pakman/src/host.ts") import unsafe { captures: (String, String) -> Js.Array<String> };
+
+-- A stable link that redirects to the newest native Linux beta (not the Wine build).
+let latest = "https://aimp.ru/?do=download.file&id=16";
+
+let archiveUrl = (version) => { "https://aimp.ru/files/desktop/builds/aimp-" ++ version ++ "-x86_64.pkg.tar.zst" };
+
+-- https://aimp.ru/files/desktop/builds/aimp-6.00.3089beta7-1-x86_64.pkg.tar.zst -> 6.00.3089beta7-1
+let versionIn = (url) => {
+  match(Js.Array.toList(captures("^https://aimp\\.ru/files/desktop/builds/aimp-(\\d+\\.\\d+\\.\\d+beta\\d+-\\d+)-x86_64\\.pkg\\.tar\\.zst$", url))) {
+    [_, version] => { Ok(version) },
+    _ => { Err("unexpected AIMP download: " ++ url) }
+  }
+};
+
+-- Upstream only exposes its newest build, dated by Last-Modified, and
+-- publishes no checksum.
+let versions = () => {
+  let parseVersion = Monad.via Task (final, modified) => {
+    Result|versionIn(final), Ok(modified)| :> Task.fromResult
+  };
+  let candidates = (version, modified) => {
+    [Candidate(version, modified, "beta", [], "")]
+  };
+
+  redirectTarget(latest)
+    :> parseVersion
+    :> Task.map(candidates)
+};
+
+let make = (version, _) => {
+  let pkg = "aimp.pkg.tar.zst";
+  Package(
+    version,
+    [source(pkg, archiveUrl(version))],
+    [
+      -- Upstream's payload as is, minus its packaging leftovers (usr/src, lintian).
+      extractMembers(pkg, ["opt", "usr/bin", "usr/lib", "usr/share/applications", "usr/share/icons",
+        "usr/share/metainfo", "usr/share/licenses", "usr/share/doc"], "", 0),
+      -- What upstream's install hook does: keep settings in the user's home, and register its file types.
+      WriteText("opt/aimp/AIMP.ini", lit("[System]\nUserMode=1\n"), Data),
+      Symlink(Own("opt/aimp/System/FileFormats.xml"), "usr/share/mime/packages/aimp.xml")
+    ],
+    [Base("/usr/lib/libgtk-3.so.0")]
+  )
+};
+
+let definition: Definition = .{
+  name = "aimp",
+  description = "AIMP native Linux audio player (beta)",
+  homepage = "https://www.aimp.ru/",
+  license = "custom:Freeware",
+  target = Host,
+  scope = System,
+  versions,
+  hosts = ["aimp.ru"],
+  -- aimp.ru only serves its newest build.
+  policy = .{ ..defaultPolicy, channel = "beta", onlyLatest = true },
+  make
+};
+
+let main = () => { serve(definition) };

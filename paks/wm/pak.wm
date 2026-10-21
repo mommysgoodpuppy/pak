@@ -1,0 +1,49 @@
+-- Workman: compiler and executable builder, with its own Deno instance.
+
+from "pakman/model.wm" import *;
+from "pakman/package.wm" import { serve };
+from "pakman/finders.wm" import { githubTagCandidates, matchText };
+
+let versions = () => {
+  githubTagCandidates("goodpuppies/workman", matchText "^(0\\.4\\.\\d+)$")
+};
+
+let make = (version, commit) => {
+  let deno = package("deno", "~2.9.0");
+  .{
+    version,
+    sources = [
+      source("wm.tar", "https://codeload.github.com/goodpuppies/workman/tar.gz/" ++ commit)
+    ],
+    install = [
+      extract("wm.tar", ".local/lib/wm/source", 1),
+      WriteText(".local/bin/wm", cat([
+        lit("#!/bin/sh\nexport WORKMAN_DENO_PATH="),
+        shellRef(file(deno, ".local/bin/deno")),
+        lit("\nexec "),
+        shellRef(file(deno, ".local/bin/deno")),
+        lit(" run -A --no-lock --node-modules-dir=none --config "),
+        shellRef(Own(".local/lib/wm/source/deno.json")),
+        lit(" "),
+        shellRef(Own(".local/lib/wm/source/src/cli.ts")),
+        lit(" \"$@\"\n")
+      ]), Exec)
+    ],
+    requires = []
+  }: Package
+};
+
+let definition: Definition = .{
+  name = "wm",
+  description = "Workman compiler and executable builder (0.4 series)",
+  homepage = "https://github.com/goodpuppies/workman",
+  license = "MIT",
+  target = Host,
+  scope = User,
+  versions,
+  hosts = ["api.github.com"],
+  policy = defaultPolicy,
+  make
+};
+
+let main = () => { serve(definition) };

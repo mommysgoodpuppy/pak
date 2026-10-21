@@ -1,0 +1,98 @@
+-- Envision: GUI that builds and runs Monado/WiVRn profiles. Upstream publishes
+-- no releases, only an AppImage from each successful CI pipeline on main
+-- (kept 30 days; pakman's source cache keeps the installed one buildable).
+-- Installed for the user, like the profiles it builds in ~/.local/share/envision.
+
+from "../../../wm-mini/tooling/pakman/src/model.wm" import *;
+from "../../../wm-mini/tooling/pakman/src/package.wm" import { serve };
+from "../../../wm-mini/tooling/pakman/src/finders.wm" import { fetchJson };
+from "../../../wm-mini/tooling/pakman/src/io.wm" import { series };
+
+let api = "https://gitlab.com/api/v4/projects/46446166";
+let project = "https://gitlab.com/gabmus/envision";
+
+record Pipeline = { id: Number, sha: String, updated_at: String };
+record Artifact = { file_type: String };
+record Job = { id: Number, name: String, status: String, artifacts: Js.Array<Artifact> };
+
+-- Only the newest few pipelines are looked at (one request each for their jobs).
+let recent = 5;
+
+let assertJson = (url) => {
+  (value) => { value :> Json.assert :> Result.mapErr((_) => { "unexpected JSON from " ++ url }) :> Task.fromResult }
+};
+
+let pipelines = () => {
+  let url = api ++ "/pipelines?ref=main&status=success&per_page=" ++ Text.of(recent);
+  let decoded: Task<Js.Array<Pipeline>, String> = fetchJson(url) :> Task.andThen(assertJson(url));
+  decoded :> Task.map(Js.Array.toList)
+};
+
+let hasAppImage = (job: Job) => {
+  job.name == "appimage" && job.status == "success"
+    && List.any(Js.Array.toList(job.artifacts), (a: Artifact) => { a.file_type == "archive" })
+};
+
+-- 2026-09-30T08:34:44Z + d2b5045774... -> 20260930.d2b5045; the job id is the ref.
+let candidate = (p: Pipeline) => {
+  let url = api ++ "/pipelines/" ++ Text.of(p.id) ++ "/jobs";
+  let decoded: Task<Js.Array<Job>, String> = fetchJson(url) :> Task.andThen(assertJson(url));
+  let date = p.updated_at :> .slice(0, 10) :> Result.withDefault("") :> .replaceAll("-", "") :> Result.withDefault("");
+  let short = p.sha :> .slice(0, 7) :> Result.withDefault(p.sha);
+  decoded
+    :> Task.map((jobs) => {
+      List.find(Js.Array.toList(jobs), hasAppImage)
+        :> Option.map((job: Job) => { Candidate(date ++ "." ++ short, p.updated_at, "main", [], Text.of(job.id)) })
+    })
+};
+
+let versions = () => {
+  let findCandidates = Monad.via Task (found) => { series(found, candidate) };
+  pipelines()
+    :> findCandidates
+    :> Task.map((found) => { List.mapPartial(found, (c) => { c }) })
+};
+
+-- 20260930.d2b5045 -> d2b5045
+let commitOf = (version) => { version :> .slice(9) :> Result.withDefault(version) };
+
+let make = (version, job) => {
+  let lib = ".local/lib/envision";
+  Package(
+    version,
+    [
+      source("artifacts.zip", api ++ "/jobs/" ++ job ++ "/artifacts"),
+      source("envision.svg", project ++ "/-/raw/" ++ commitOf(version) ++ "/data/icons/org.gabmus.envision.svg")
+    ],
+    [
+      extractMembers("artifacts.zip", ["Envision-x86_64.AppImage"], lib, 0),
+      Symlink(Own(lib ++ "/Envision-x86_64.AppImage"), ".local/bin/envision"),
+      Install("envision.svg", ".local/share/icons/hicolor/scalable/apps/org.gabmus.envision.svg", Data),
+      userDesktopEntry("org.gabmus.envision", .{
+        title = "Envision",
+        comment = "Build and run Monado and WiVRn profiles",
+        exec = ref(Own(".local/bin/envision")),
+        icon = "org.gabmus.envision",
+        categories = ["Utility"],
+        terminal = false
+      })
+    ],
+    -- AppImages mount themselves with FUSE 2.
+    [Base("/usr/lib/libfuse.so.2")]
+  )
+};
+
+let definition: Definition = .{
+  name = "envision",
+  description = "Builds and runs Monado and WiVRn profiles (CI snapshots of main)",
+  homepage = project,
+  license = "AGPL-3.0-or-later",
+  target = Host,
+  scope = User,
+  versions,
+  hosts = ["gitlab.com"],
+  policy = .{ ..defaultPolicy, channel = "main" },
+  make
+};
+
+let main = () => { serve(definition) };

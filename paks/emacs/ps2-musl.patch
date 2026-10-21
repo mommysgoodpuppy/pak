@@ -1,0 +1,111 @@
+--- a/src/s/gnu-linux.h
++++ b/src/s/gnu-linux.h
+@@ -340,3 +340,32 @@
+ #ifdef DOUG_LEA_MALLOC
+ #undef REL_ALLOC
+ #endif
++
++/* PS2 Linux/musl target. Use the compiler driver and load Lisp at startup. */
++#undef WORDS_BIG_ENDIAN
++#undef DATA_SEG_BITS
++#undef DATA_START
++#undef START_FILES
++#define START_FILES
++#undef LIB_STANDARD
++#define LIB_STANDARD -lc
++#undef LIB_GCC
++#define LIB_GCC -lgcc
++#undef UNEXEC
++#define UNEXEC
++#define CANNOT_DUMP
++#undef HAVE_GETWD
++#undef GNU_LIBRARY_PENDING_OUTPUT_COUNT
++#ifndef NOT_C_CODE
++#ifdef emacs
++#include <stdio_ext.h>
++#define PENDING_OUTPUT_COUNT(stream) __fpending(stream)
++#endif
++#endif
++
++#define ORDINARY_LINK
++#undef REL_ALLOC
++
++#define NO_TERMIO
++
++#define WAIT_USE_INT
+--- a/src/m/mips.h
++++ b/src/m/mips.h
+@@ -235,3 +235,11 @@
+ #endif /* BSD_SYSTEM */
+ 
+ #endif /* not NEWSOS5 && not __linux__ */
++
++/* PS2 little-endian ELF; no executable dump or fixed data segment. */
++#undef WORDS_BIG_ENDIAN
++#undef DATA_SEG_BITS
++#undef DATA_START
++#define CANNOT_DUMP
++#undef UNEXEC
++#define UNEXEC
+--- a/src/gmalloc.c
++++ b/src/gmalloc.c
+@@ -1473,7 +1473,16 @@
+ __default_morecore (increment)
+      __malloc_ptrdiff_t increment;
+ {
+-  __ptr_t result = (__ptr_t) __sbrk (increment);
++  /* musl does not support increasing sbrk. A bounded, non-PIE BSS arena
++     also keeps every Lisp pointer in Emacs 20's 28-bit address range.
++     Unused BSS pages do not consume physical RAM. */
++  static union { double align; char bytes[8 * 1024 * 1024]; } arena;
++  static ptrdiff_t used;
++  __ptr_t result;
++  if (increment > (ptrdiff_t) sizeof arena.bytes - used || increment < -used)
++    return NULL;
++  result = arena.bytes + used;
++  used += increment;
+   if (result == (__ptr_t) -1)
+     return NULL;
+   return result;
+--- a/src/process.c
++++ b/src/process.c
+@@ -364,7 +364,7 @@
+ 	{
+ #ifndef VMS
+ 	  /* Cast to suppress warning if the table has const char *.  */
+-	  signame = (char *) sys_siglist[code];
++	  signame = (char *) strsignal(code);
+ #else
+ 	  signame = sys_errlist[code];
+ #endif
+@@ -4178,7 +4178,7 @@
+ 		{
+ #ifndef VMS
+ 		  /* Suppress warning if the table has const char *.  */
+-		  signame = (char *) sys_siglist[code];
++		  signame = (char *) strsignal(code);
+ #else
+ 		  signame = sys_errlist[code];
+ #endif
+--- a/src/emacs.c
++++ b/src/emacs.c
+@@ -1057,7 +1057,7 @@
+     }
+ 
+   no_loadup
+-    = !argmatch (argv, argc, "-nl", "--no-loadup", 6, NULL, &skip_args);
++    = argmatch (argv, argc, "-nl", "--no-loadup", 6, NULL, &skip_args);
+ 
+ 
+ #ifdef HAVE_X_WINDOWS
+--- a/src/lread.c
++++ b/src/lread.c
+@@ -2993,7 +2993,7 @@
+   /* Compute the default load-path.  */
+ #ifdef CANNOT_DUMP
+   normal = PATH_LOADSEARCH;
+-  Vload_path = decode_env_path (0, normal);
++  Vload_path = decode_env_path ("EMACSLOADPATH", normal);
+ #else
+   if (NILP (Vpurify_flag))
+     normal = PATH_LOADSEARCH;

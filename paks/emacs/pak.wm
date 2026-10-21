@@ -1,0 +1,26 @@
+from "../../../wm-mini/tooling/pakman-subsetml/src/model.wm" import * as M;
+from "../../../wm-mini/tooling/pakman-subsetml/src/package.wm" import * as Package;
+
+let version = "20.7-ps2.1";
+let definition: M.Definition = M.Definition{
+  name = "emacs",
+  description = "GNU Emacs 20.7, terminal editor and Emacs Lisp, native PS2/musl build",
+  make = (_, _) => {
+    M.Package(version, [
+      M.Source("SHA256SUMS", "SHA256SUMS"),
+      M.Source("ps2-musl.patch", "ps2-musl.patch"),
+      M.Source("build.sh", "build.sh"),
+      M.Source("emacs.sh", "emacs.sh"),
+      M.Source("ps2-musl.cache", "ps2-musl.cache")
+    ], [
+      M.Build("/bin/sh", [M.Input("build.sh"), M.Input("SHA256SUMS"),
+        M.Input("ps2-musl.patch"), M.Input("emacs.sh"), M.Out("payload"),
+        M.Input("ps2-musl.cache")]),
+      M.Install("payload/emacs.sh", "bin/emacs", M.Exec),
+      M.InstallTree("payload/exec", "libexec/emacs/20.7", M.Exec),
+      M.InstallTree("payload/share", "share/emacs/20.7", M.Data),
+      M.Install("payload/COPYING", "share/licenses/emacs/COPYING", M.Data)
+    ])
+  }
+};
+let main = () => { Package.serve(definition) };
