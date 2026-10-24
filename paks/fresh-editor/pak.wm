@@ -1,7 +1,7 @@
 -- Fresh's upstream GNU/Linux x86_64 binary, managed by pakman.
-from "../../../wm-mini/tooling/pakman/src/model.wm" import *;
-from "../../../wm-mini/tooling/pakman/src/package.wm" import { serve };
-from "../../../wm-mini/tooling/pakman/src/finders.wm" import { githubReleases, releaseCandidates, stableReleases };
+from "pakman/model.wm" import *;
+from "pakman/package.wm" import { serve };
+from "pakman/finders.wm" import { githubReleases, releaseCandidates, stableReleases };
 
 let repo = "sinelaw/fresh";
 let bundle = "fresh-editor-x86_64-unknown-linux-gnu";

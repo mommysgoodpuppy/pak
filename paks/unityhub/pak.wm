@@ -1,10 +1,9 @@
 -- Unity Hub: upstream's official Debian payload, without apt setup or postinst.
 -- The editor is separate: use Hub to install VRChat's required 2022.3.22f1.
-from "../../../wm-mini/tooling/pakman/src/model.wm" import *;
-from "../../../wm-mini/tooling/pakman/src/package.wm" import { serve };
-from "../../../wm-mini/tooling/pakman/src/finders.wm" import { redirectTarget };
-from "../../../wm-mini/tooling/pakman/src/io.wm" import { fetchText, series };
-from js.module("../../../wm-mini/tooling/pakman/src/host.ts") import unsafe { captures: (String, String) -> Js.Array<String> };
+from "pakman/model.wm" import *;
+from "pakman/package.wm" import { serve };
+from "pakman/finders.wm" import { redirectTarget, captures };
+from "pakman/io.wm" import { fetchText, series };
 
 record UpstreamPackage = { version: String, filename: String, sha256: String };
 from js.module("./upstream.ts") import unsafe { packages: String -> Js.Value };
@@ -37,7 +36,7 @@ let versions = () => {
 let make = (version, filename) => {
   -- Forge packages ship /usr/lib/unityhub and the launcher symlink themselves.
   -- Older fpm packages use /opt/unityhub and create the symlink in postinst.
-  let forge = Js.Array.toList(captures("/UnityHubSetup-[^/]+\\.deb$", filename)) != [];
+  let forge = captures("/UnityHubSetup-[^/]+\\.deb$", filename) != [];
   let payload = if (forge) {
     [debPayload("unityhub.deb")]
   } else {

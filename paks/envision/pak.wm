@@ -3,10 +3,10 @@
 -- (kept 30 days; pakman's source cache keeps the installed one buildable).
 -- Installed for the user, like the profiles it builds in ~/.local/share/envision.
 
-from "../../../wm-mini/tooling/pakman/src/model.wm" import *;
-from "../../../wm-mini/tooling/pakman/src/package.wm" import { serve };
-from "../../../wm-mini/tooling/pakman/src/finders.wm" import { fetchJson, matchText };
-from "../../../wm-mini/tooling/pakman/src/io.wm" import { series, describe };
+from "pakman/model.wm" import *;
+from "pakman/package.wm" import { serve };
+from "pakman/finders.wm" import { fetchJson, matchText };
+from "pakman/io.wm" import { series, describe };
 
 let api = "https://gitlab.com/api/v4/projects/46446166";
 let project = "https://gitlab.com/gabmus/envision";

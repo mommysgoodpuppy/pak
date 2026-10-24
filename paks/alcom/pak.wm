@@ -1,8 +1,8 @@
 -- ALCOM: native graphical VPM client. Repackage upstream's amd64 Debian payload.
 -- GUI releases use gui-v tags; plain v tags belong to the vrc-get CLI.
-from "../../../wm-mini/tooling/pakman/src/model.wm" import *;
-from "../../../wm-mini/tooling/pakman/src/package.wm" import { serve };
-from "../../../wm-mini/tooling/pakman/src/finders.wm" import { githubReleases, releaseCandidates, stableReleases, matchText };
+from "pakman/model.wm" import *;
+from "pakman/package.wm" import { serve };
+from "pakman/finders.wm" import { githubReleases, releaseCandidates, stableReleases, matchText };
 
 let repo = "vrc-get/vrc-get";
 let deb = (version) => { "alcom_" ++ version ++ "-1_amd64.deb" };

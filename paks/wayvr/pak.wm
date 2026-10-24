@@ -2,9 +2,9 @@
 -- Upstream's prebuilt binaries from GitHub releases, plus the desktop file and
 -- icons from the repository at the same tag, where the AUR package installs them.
 
-from "../../../wm-mini/tooling/pakman/src/model.wm" import *;
-from "../../../wm-mini/tooling/pakman/src/package.wm" import { serve };
-from "../../../wm-mini/tooling/pakman/src/finders.wm" import { githubReleases, releaseCandidates, stableReleases };
+from "pakman/model.wm" import *;
+from "pakman/package.wm" import { serve };
+from "pakman/finders.wm" import { githubReleases, releaseCandidates, stableReleases };
 
 let repo = "wayvr-org/wayvr";
 

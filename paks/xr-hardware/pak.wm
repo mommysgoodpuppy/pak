@@ -2,15 +2,14 @@
 -- devices. Upstream commits the generated rules file; this is the file the AUR
 -- package's `make install_package` installs.
 
-from "../../../wm-mini/tooling/pakman/src/model.wm" import *;
-from "../../../wm-mini/tooling/pakman/src/package.wm" import { serve };
-from "../../../wm-mini/tooling/pakman/src/finders.wm" import { gitlabTags, Tag };
-from js.module("../../../wm-mini/tooling/pakman/src/host.ts") import unsafe { captures: (String, String) -> Js.Array<String> };
+from "pakman/model.wm" import *;
+from "pakman/package.wm" import { serve };
+from "pakman/finders.wm" import { gitlabTags, Tag, captures };
 
 let host = "gitlab.freedesktop.org";
 let project = "monado/utilities/xr-hardware";
 
-let isRelease = (name) => { Js.Array.toList(captures("^\\d+\\.\\d+\\.\\d+$", name)) != [] };
+let isRelease = (name) => { captures("^\\d+\\.\\d+\\.\\d+$", name) != [] };
 
 let versions = () => {
   gitlabTags(host, project)

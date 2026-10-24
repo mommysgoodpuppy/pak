@@ -1,9 +1,8 @@
 -- T3 Code: minimal web GUI for coding agents. Nightly AppImage builds.
 
-from "../../../wm-mini/tooling/pakman/src/model.wm" import *;
-from "../../../wm-mini/tooling/pakman/src/package.wm" import { serve };
-from "../../../wm-mini/tooling/pakman/src/finders.wm" import { githubReleases, releaseCandidates, stableReleases };
-from js.module("../../../wm-mini/tooling/pakman/src/host.ts") import unsafe { captures: (String, String) -> Js.Array<String> };
+from "pakman/model.wm" import *;
+from "pakman/package.wm" import { serve };
+from "pakman/finders.wm" import { githubReleases, releaseCandidates, stableReleases, captures };
 
 let repo = "pingdotgg/t3code";
 
@@ -11,11 +10,9 @@ let repo = "pingdotgg/t3code";
 -- dash so they sort and read like 0.0.46.nightly.20261005.2702.
 let nightlyTag = "^v(\\d+\\.\\d+\\.\\d+)-nightly\\.(\\d+\\.\\d+)$";
 
-let capturesOf = (pattern, text) => { captures(pattern, text) :> Js.Array.toList };
-
 -- 0.0.46.nightly.20261005.2702 -> 0.0.46-nightly.20261005.2702
 let releaseVersion = (version) => {
-  match(capturesOf("^(\\d+\\.\\d+\\.\\d+)\\.nightly\\.(\\d+\\.\\d+)$", version)) {
+  match(captures("^(\\d+\\.\\d+\\.\\d+)\\.nightly\\.(\\d+\\.\\d+)$", version)) {
     [_, base, build] => { base ++ "-nightly." ++ build },
     _ => { version }
   }
@@ -23,7 +20,7 @@ let releaseVersion = (version) => {
 
 -- v0.0.46-nightly.20261005.2702 -> Some(0.0.46.nightly.20261005.2702)
 let nightlyVersion = (tag) => {
-  match(capturesOf(nightlyTag, tag)) {
+  match(captures(nightlyTag, tag)) {
     [_, base, build] => { Some(base ++ ".nightly." ++ build) },
     _ => { None }
   }

@@ -1,9 +1,9 @@
 -- OscGoesBrrr: connects VRChat avatars (OSC) to Intiface/Buttplug devices.
 -- Upstream's Linux AppImage plus the logo it is built with.
-from "../../../wm-mini/tooling/pakman/src/model.wm" import *;
-from "../../../wm-mini/tooling/pakman/src/package.wm" import { serveWithBuild };
-from "../../../wm-mini/tooling/pakman/src/finders.wm" import { githubReleases, releaseCandidates, stableReleases };
-from "../../../wm-mini/tooling/pakman/src/io.wm" import { runCapture };
+from "pakman/model.wm" import *;
+from "pakman/package.wm" import { serveWithBuild };
+from "pakman/finders.wm" import { githubReleases, releaseCandidates, stableReleases };
+from "pakman/io.wm" import { runCapture };
 let repo = "OscToys/OscGoesBrrr";
 let appImage = (version) => { "OscGoesBrrr-linux-" ++ version ++ ".AppImage" };
 let versions = () => {

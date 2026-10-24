@@ -1,9 +1,9 @@
 -- Gale: mod manager for Thunderstore. Installs upstream's .deb payload as is,
 -- using the host's WebKitGTK (the AppImage would bundle its own).
 
-from "../../../wm-mini/tooling/pakman/src/model.wm" import *;
-from "../../../wm-mini/tooling/pakman/src/package.wm" import { serve };
-from "../../../wm-mini/tooling/pakman/src/finders.wm" import { githubReleases, releaseCandidates, stableReleases, matchText };
+from "pakman/model.wm" import *;
+from "pakman/package.wm" import { serve };
+from "pakman/finders.wm" import { githubReleases, releaseCandidates, stableReleases, matchText };
 
 let repo = "Kesomannen/gale";
 

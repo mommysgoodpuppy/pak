@@ -8,14 +8,9 @@
 -- The index publishes a sha256 for every tarball, so every download is
 -- verified against upstream, not only pinned on first sight.
 
-from "../../../wm-mini/tooling/pakman/src/model.wm" import *;
-from "../../../wm-mini/tooling/pakman/src/package.wm" import { serve };
-from "../../../wm-mini/tooling/pakman/src/finders.wm" import { fetchJson };
-from js.module("../../../wm-mini/tooling/pakman/src/host.ts") import { jsonField };
-from js.module("../../../wm-mini/tooling/pakman/src/host.ts") import unsafe {
-  jsonKeys: Js.Value -> Js.Array<String>,
-  jsonTextOr: (Js.Value, String) -> String
-};
+from "pakman/model.wm" import *;
+from "pakman/package.wm" import { serve };
+from "pakman/finders.wm" import { fetchJson, jsonField, jsonKeys, jsonTextOr };
 
 let index = "https://ziglang.org/download/index.json";
 let platform = "x86_64-linux";
@@ -43,7 +38,6 @@ let candidateOf = (indexJson: Js.Value, key) => {
 let candidatesOf = (indexJson: Js.Value) => {
   indexJson
     :> jsonKeys
-    :> Js.Array.toList
     :> List.mapPartial((key) => {
       match(candidateOf(indexJson, key)) { Ok(c) => { Some(c) }, Err(_) => { None } }
     })

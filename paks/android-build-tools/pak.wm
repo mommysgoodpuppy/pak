@@ -2,14 +2,10 @@
 -- SDK repository, laid out where the AUR's android-sdk-build-tools puts them:
 -- /opt/android-sdk/build-tools/<version>, with the tools linked into /usr/bin.
 
-from "../../../wm-mini/tooling/pakman/src/model.wm" import *;
-from "../../../wm-mini/tooling/pakman/src/package.wm" import { serve };
-from "../../../wm-mini/tooling/pakman/src/finders.wm" import { redirectTarget };
-from "../../../wm-mini/tooling/pakman/src/io.wm" import { fetchText, series };
-from js.module("../../../wm-mini/tooling/pakman/src/host.ts") import unsafe {
-  captures: (String, String) -> Js.Array<String>,
-  capturesAll: (String, String) -> Js.Array<Js.Array<String>>
-};
+from "pakman/model.wm" import *;
+from "pakman/package.wm" import { serve };
+from "pakman/finders.wm" import { redirectTarget, captures, capturesAll };
+from "pakman/io.wm" import { fetchText, series };
 
 let repository = "https://dl.google.com/android/repository/";
 let index = repository ++ "repository2-3.xml";
@@ -21,7 +17,7 @@ let recent = 8;
 -- The repository's channels: 0 stable, 1 beta, 2 dev, 3 canary. Release
 -- candidates (37.0.0-rc2) are listed as stable too; they go in "preview".
 let channelName = (version, id) => {
-  if (Js.Array.toList(captures("-rc\\d+$", version)) != []) {
+  if (captures("-rc\\d+$", version) != []) {
     "preview"
   } else {
     match(id) { "0" => { "stable" }, "1" => { "beta" }, "2" => { "dev" }, _ => { "canary" } }
@@ -29,15 +25,14 @@ let channelName = (version, id) => {
 };
 
 let first = (pattern, text) => {
-  match(Js.Array.toList(captures(pattern, text))) { [_, found, .._] => { found }, _ => { "" } }
+  match(captures(pattern, text)) { [_, found, .._] => { found }, _ => { "" } }
 };
 
 -- (version, channel, linux archive file name) for each build-tools package.
 let listed = (xml) => {
   capturesAll("<remotePackage path=\"build-tools;([^\"]+)\">([\\s\\S]*?)</remotePackage>", xml)
-    :> Js.Array.toList
     :> List.mapPartial((m) => {
-      match(Js.Array.toList(m)) {
+      match(m) {
         [_, version, body] => {
           let archive = first("<url>([^<]+)</url>\\s*</complete>\\s*<host-os>linux</host-os>", body);
           if (archive == "") { None } else { Some((version, channelName(version, first("<channelRef ref=\"channel-(\\d)\"", body)), archive)) }
@@ -64,7 +59,7 @@ let versions = () => {
 
 -- 37.0.0-rc2 -> ("37", "0", "0")
 let revision = (version) => {
-  match(Js.Array.toList(captures("^(\\d+)\\.(\\d+)\\.(\\d+)", version))) {
+  match(captures("^(\\d+)\\.(\\d+)\\.(\\d+)", version)) {
     [_, major, minor, micro] => { (major, minor, micro) },
     _ => { (version, "0", "0") }
   }

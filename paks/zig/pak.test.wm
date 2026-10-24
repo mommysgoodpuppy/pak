@@ -3,7 +3,7 @@
 from "../../../wm-mini/tooling/testman/test.wm" import *;
 from js.global("JSON") import { parse } as JSON;
 from "./pak.wm" import { candidateOf, make };
-from "../../../wm-mini/tooling/pakman/src/model.wm" import { source };
+from "pakman/model.wm" import { source };
 
 let index = JSON.parse("{\"1.2.3\": {\"date\": \"2020-01-01\", \"x86_64-linux\": {\"tarball\": \"https://example.invalid/archives/unusual-stable-name.tar.xz\", \"shasum\": \"stable-checksum\", \"size\": \"123\"}}, \"master\": {\"version\": \"9.9.9-dev.42+abc\", \"date\": \"2020-01-02\", \"x86_64-linux\": {\"tarball\": \"https://example.invalid/snapshots/another-unrelated-name.tar.xz\", \"shasum\": \"dev-checksum\", \"size\": \"456\"}}}");
 
