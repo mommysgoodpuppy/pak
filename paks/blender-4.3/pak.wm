@@ -1,0 +1,76 @@
+-- Blender 4.3: preserve the Windows avatar-authoring series and add-on baseline.
+-- Upstream's portable Linux bundle; no AUR build or rolling-major upgrade.
+from "pakman/model.wm" import *;
+from "pakman/package.wm" import { serve };
+from "pakman/finders.wm" import { redirectTarget };
+from "pakman/io.wm" import { fetchText, series };
+from js.module("./upstream.ts") import unsafe {
+  versionsFromIndex: String -> Js.Array<String>,
+  checksumFor: (String, String) -> String
+};
+
+let repository = "https://download.blender.org/release/Blender4.3/";
+let archive = (version) => { "blender-" ++ version ++ "-linux-x64.tar.xz" };
+
+let candidate = (version) => {
+  let filename = archive(version);
+  let url = repository ++ filename;
+  fetchText(repository ++ "blender-" ++ version ++ ".sha256")
+    :> Task.andThen((text) => {
+      let checksum = checksumFor(text, filename);
+      if (checksum == "") { Task.fail("Blender 4.3: missing SHA-256 for " ++ filename) } else {
+        redirectTarget(url) :> Task.map((_, modified) => {
+          Candidate(version, modified, "stable", [Checksum(url, checksum)], url)
+        })
+      }
+    })
+};
+
+let versions = () => {
+  fetchText(repository) :> Task.andThen((text) => {
+    series(versionsFromIndex(text) :> Js.Array.toList, candidate)
+  })
+};
+
+let make = (version, url) => {
+  if (url == "") {
+    Panic("blender-4.3: missing archive URL; run `wm pakman resolve blender-4.3`")
+  } else {
+    let dir = ".local/lib/blender-4.3";
+    Package(
+      version,
+      [source("blender.tar.xz", url)],
+      [
+        extract("blender.tar.xz", dir, 1),
+        Symlink(Own(dir ++ "/blender"), ".local/bin/blender-4.3"),
+        -- Unity's .blend importer invokes `blender` through PATH.
+        Symlink(Own(dir ++ "/blender"), ".local/bin/blender"),
+        Symlink(Own(dir ++ "/blender.svg"), ".local/share/icons/hicolor/scalable/apps/blender-4.3.svg"),
+        userDesktopEntry("blender-4.3", .{
+          title = "Blender 4.3",
+          comment = "Blender 4.3 avatar authoring",
+          exec = cat([ref(Own(".local/bin/blender-4.3")), lit(" %f")]),
+          icon = "blender-4.3",
+          categories = ["Graphics", "3DGraphics"],
+          terminal = false
+        })
+      ],
+      [Base("/usr/lib/libX11.so.6"), Base("/usr/lib/libGL.so.1"), Base("/usr/lib/libXi.so.6")]
+    )
+  }
+};
+
+let definition: Definition = .{
+  name = "blender-4.3",
+  description = "Blender 4.3 portable Linux bundle for existing avatar projects",
+  homepage = "https://www.blender.org/",
+  license = "GPL-3.0-or-later",
+  target = Host,
+  scope = User,
+  versions,
+  hosts = ["download.blender.org"],
+  policy = defaultPolicy,
+  make
+};
+
+let main = () => { serve(definition) };

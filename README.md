@@ -43,6 +43,7 @@ uses sudo for the final copy), `User` packages at your home directory (no root).
 | `oscgoesbrrr` | user | GitHub releases, AppImage | logo and license from the repo at the tag |
 | `intiface-central` | system | GitHub releases, zip | `/opt/intiface-central`; tag (`v3.2.2+46`) travels as the ref; zip layout varies per release |
 | `alcom` | system | vrc-get GUI releases, `.deb` | native VPM client; selects `gui-v` stable releases, verifies GitHub digests |
+| [`blender-4.3`](docs/blender-4.3.md) | user | Blender's official Linux x64 archive | stays on 4.3.x; upstream SHA-256; `blender` and `blender-4.3` launchers |
 | `unityhub` | system | Unity's official Debian repository | index SHA-256, artifact age gate; Hub manages the editor separately |
 | `fresh-editor` | system | GitHub releases, GNU/Linux x86_64 tarball | `/usr/bin/fresh`, desktop entry and icons; managed receipt disables self-updates |
 
