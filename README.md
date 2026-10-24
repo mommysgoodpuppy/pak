@@ -20,6 +20,10 @@ wm run paks/zig/pak.wm -- make 0.14.1 \
 pakman runs these in a sandbox and does everything else: policy, locks, verified downloads, the
 store, generations and rollback. See `../wm-mini/tooling/pakman/DESIGN.md`.
 
+A package reaches pakman only through `"pakman/…"` imports (`model.wm`, `package.wm`,
+`finders.wm`, `io.wm`, `repository.wm`), which ship with wm, so it doesn't need a wm-mini
+checkout beside it.
+
 Packages install where the software expects to live. `System` packages are rooted at `/` (pakman
 uses sudo for the final copy), `User` packages at your home directory (no root).
 
