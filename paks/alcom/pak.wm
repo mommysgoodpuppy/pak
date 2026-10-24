@@ -13,7 +13,7 @@ let versions = () => {
       ..stableReleases,
       versionOf = matchText "^gui-v(\\d+\\.\\d+\\.\\d+)$",
       assets = (version) => { [deb(version)] },
-      ref = (release, _) => { release.tag }
+      ref = (release, _) => { Some(release.tag) }
     })
 };
 

@@ -16,7 +16,7 @@ let versions = () => {
       ..stableReleases,
       versionOf = matchText "^v(\\d+\\.\\d+\\.\\d+)\\+\\d+$",
       assets = (version) => { [zip(version)] },
-      ref = (release, _) => { release.tag }
+      ref = (release, _) => { Some(release.tag) }
     })
 };
 

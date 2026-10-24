@@ -20,8 +20,9 @@ let versions = () => {
     :> Task.map(releaseCandidates .{
       ..stableReleases,
       versionOf = matchText "^v(\\d+\\.\\d+\\.\\d+.*)$",
-      accept = (release) => { List.any(release.assets, isDeb) },
-      ref = (release, _) => { List.find(release.assets, isDeb) :> Option.map((asset: ReleaseAsset) => { asset.name }) :> Option.withDefault("") }
+      -- Prereleases too; a release without a .deb has no ref and is skipped.
+      accept = (_) => { true },
+      ref = (release, _) => { List.find(release.assets, isDeb) :> Option.map((asset: ReleaseAsset) => { asset.name }) }
     })
 };
 

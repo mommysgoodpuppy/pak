@@ -5,8 +5,8 @@
 
 from "../../../wm-mini/tooling/pakman/src/model.wm" import *;
 from "../../../wm-mini/tooling/pakman/src/package.wm" import { serve };
-from "../../../wm-mini/tooling/pakman/src/finders.wm" import { fetchJson };
-from "../../../wm-mini/tooling/pakman/src/io.wm" import { series };
+from "../../../wm-mini/tooling/pakman/src/finders.wm" import { fetchJson, matchText };
+from "../../../wm-mini/tooling/pakman/src/io.wm" import { series, describe };
 
 let api = "https://gitlab.com/api/v4/projects/46446166";
 let project = "https://gitlab.com/gabmus/envision";
@@ -33,17 +33,29 @@ let hasAppImage = (job: Job) => {
     && List.any(Js.Array.toList(job.artifacts), (a: Artifact) => { a.file_type == "archive" })
 };
 
--- 2026-09-30T08:34:44Z + d2b5045774... -> 20260930.d2b5045; the job id is the ref.
+-- 2026-09-30T08:34:44Z + d2b5045774... -> 20260930.d2b5045. Anything else from
+-- GitLab fails `versions` rather than becoming a malformed version.
+let versionOf = (p: Pipeline) => {
+  let unexpected = "pipeline " ++ Text.of(p.id) ++ " has an unexpected date or commit";
+  match(matchText("^(\\d{4}-\\d{2}-\\d{2})T")(p.updated_at), matchText("^([0-9a-f]{7})")(p.sha)) {
+    (Some(date), Some(short)) => {
+      date :> .replaceAll("-", "") :> Result.map((day) => { day ++ "." ++ short }) :> Result.mapErr(describe(unexpected))
+    },
+    _ => { Err(unexpected) }
+  }
+};
+
+-- The job id is the ref.
 let candidate = (p: Pipeline) => {
   let url = api ++ "/pipelines/" ++ Text.of(p.id) ++ "/jobs";
-  let decoded: Task<Js.Array<Job>, String> = fetchJson(url) :> Task.andThen(assertJson(url));
-  let date = p.updated_at :> .slice(0, 10) :> Result.withDefault("") :> .replaceAll("-", "") :> Result.withDefault("");
-  let short = p.sha :> .slice(0, 7) :> Result.withDefault(p.sha);
-  decoded
-    :> Task.map((jobs) => {
-      List.find(Js.Array.toList(jobs), hasAppImage)
-        :> Option.map((job: Job) => { Candidate(date ++ "." ++ short, p.updated_at, "main", [], Text.of(job.id)) })
-    })
+  versionOf(p) :> Task.fromResult :> Task.andThen((version) => {
+    let decoded: Task<Js.Array<Job>, String> = fetchJson(url) :> Task.andThen(assertJson(url));
+    decoded
+      :> Task.map((jobs) => {
+        List.find(Js.Array.toList(jobs), hasAppImage)
+          :> Option.map((job: Job) => { Candidate(version, p.updated_at, "main", [], Text.of(job.id)) })
+      })
+  })
 };
 
 let versions = () => {
@@ -53,8 +65,14 @@ let versions = () => {
     :> Task.map((found) => { List.mapPartial(found, (c) => { c }) })
 };
 
--- 20260930.d2b5045 -> d2b5045
-let commitOf = (version) => { version :> .slice(9) :> Result.withDefault(version) };
+-- 20260930.d2b5045 -> d2b5045. Versions only come from `versionOf`, so any
+-- other shape is a bug in this file, not upstream data.
+let commitOf = (version) => {
+  match(matchText("^\\d{8}\\.([0-9a-f]{7})$")(version)) {
+    Some(commit) => { commit },
+    None => { Panic("envision versions look like 20260930.d2b5045, got " ++ version) }
+  }
+};
 
 let make = (version, job) => {
   let lib = ".local/lib/envision";
